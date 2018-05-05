@@ -1,0 +1,32 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  AppId:
+    Type: String
+  AppKey:
+    Type: String
+  SecretKey:
+    Type: String
+
+Globals:
+  Function:
+    Runtime: nodejs8.10
+    Handler: index.handler
+    Timeout: 180
+    Environment:
+      Variables:
+        APP_ID: !Ref AppId
+        APP_KEY: !Ref AppKey
+        SECRET_KEY: !Ref SecretKey
+
+Resources:
+  HelloFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions/hello
+      Events:
+        Schedule1:
+          Type: Schedule
+          Properties:
+            Schedule: rate(1 minute)
