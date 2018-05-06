@@ -6,7 +6,7 @@ const pusher = new Pusher({
   secret: process.env.SECRET_KEY
 });
 
-exports.handler = (event, context, callback) => {
+module.exports = async (event, context) => {
   const body = event.body.split("&");
   const socket_id = body[0].split("=")[1];
   const channel_name = body[1].split("=")[1];
@@ -20,10 +20,8 @@ exports.handler = (event, context, callback) => {
 
   const auth = pusher.authenticate(socket_id, channel_name, presenceData);
 
-  const response = {
+  return {
     statusCode: 200,
     body: JSON.stringify(auth)
   };
-
-  callback(null, response);
 };

@@ -6,13 +6,11 @@ const pusher = new Pusher({
   secret: process.env.SECRET_KEY
 });
 
-exports.handler = (event, context, callback) => {
+module.exports = async (event, context) => {
   console.log("Hello!");
 
   pusher.trigger("presence-game-999", "hello", {
     message: "hello world",
     timestamp: Date.now()
   });
-
-  callback(null);
 };

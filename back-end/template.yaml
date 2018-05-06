@@ -14,7 +14,7 @@ Globals:
     Cors: "'*'"
   Function:
     Runtime: nodejs8.10
-    Handler: index.handler
+    Handler: shared/kappa.handler
     Timeout: 180
     Environment:
       Variables:

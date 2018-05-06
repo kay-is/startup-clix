@@ -1,0 +1,8 @@
+{
+  "name": "hello",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "pusher": "^1.5.1"
+  }
+}
