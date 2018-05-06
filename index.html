@@ -8,6 +8,28 @@
 </head>
 
 <body>
+  <div class="jumbotron" style="width: 50%; margin: auto;">
+    <h1 class="display-3">Startup Clix</h1>
+    <p class="lead">Dev.to Pusher contest.
+    </p>
+    <em>Work in progress!</em>
+    <hr class="my-4">
+    <div>
+      <h3>Server Event</h3>
+      <pre id="serverevent">Only once a minute...</pre>
+    </div>
+    <div>
+      <h3>Player Count:
+        <span id="playercount">...</span>
+      </h3>
+    </div>
+    <div>
+      <h4>Players</h4>
+      <ul class="list-group" id="playerlist">
+        <li class="list-group-item">...</li>
+      </ul>
+    </div>
+  </div>
   <script src="https://js.pusher.com/4.2/pusher.min.js"></script>
   <script type="module" src="front-end/index.js"></script>
 </body>

@@ -9,7 +9,7 @@ const pusher = new Pusher({
 exports.handler = (event, context, callback) => {
   console.log("Hello!");
 
-  pusher.trigger("global", "hello", {
+  pusher.trigger("presence-game-999", "hello", {
     message: "hello world",
     timestamp: Date.now()
   });
