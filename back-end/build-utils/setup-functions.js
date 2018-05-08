@@ -1,6 +1,7 @@
 const { readdirSync, statSync } = require("fs");
 const { join, resolve } = require("path");
 const { execSync } = require("child_process");
+
 const functionsDir = resolve(__dirname + "/../functions/");
 
 const dirs = p =>

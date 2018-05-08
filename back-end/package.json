@@ -6,14 +6,16 @@
     "setup-functions": "node ./build-utils/setup-functions.js",
     "copy-shared": "node ./build-utils/copy-shared.js",
     "setup": "npm run setup-functions && npm run copy-shared",
-    "package":
-      "sam package --template-file template.yaml --s3-bucket startup-clix --output-template-file packaged.yaml",
-    "deploy":
-      "sam deploy --template-file packaged.yaml --stack-name startup-clix --capabilities CAPABILITY_IAM"
+    "package": "sam package --template-file template.yaml --s3-bucket startup-clix --output-template-file packaged.yaml",
+    "deploy": "sam deploy --template-file packaged.yaml --stack-name startup-clix --capabilities CAPABILITY_IAM"
   },
   "author": "Kay Plößer <k@kay.is> (http://kay.is)",
   "license": "GPL-3.0",
   "devDependencies": {
-    "ncp": "^2.0.0"
+    "eslint": "4.19.1",
+    "eslint-config-prettier": "2.9.0",
+    "eslint-plugin-prettier": "2.6.0",
+    "ncp": "^2.0.0",
+    "prettier": "1.12.1"
   }
 }

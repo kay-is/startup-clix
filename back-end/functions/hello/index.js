@@ -7,8 +7,6 @@ const pusher = new Pusher({
 });
 
 module.exports = async (event, context) => {
-  console.log("Hello!");
-
   pusher.trigger("presence-game-999", "hello", {
     message: "hello world",
     timestamp: Date.now()

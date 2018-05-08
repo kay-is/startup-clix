@@ -10,8 +10,6 @@ Parameters:
     Type: String
 
 Globals:
-  Api:
-    Cors: "'*'"
   Function:
     Runtime: nodejs8.10
     Handler: shared/kappa.handler
@@ -54,4 +52,4 @@ Resources:
           Type: Api
           Properties:
             Path: /pusherauth
-            Method: post
+            Method: get

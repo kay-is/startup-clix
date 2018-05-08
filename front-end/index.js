@@ -4,15 +4,18 @@ const APP_KEY = "2205eeb25f71d1ef40fd";
 
 console.log("getting a channel to join");
 
-fetch(API_URL + "getgamechannel")
+fetchJsonp(API_URL + "getgamechannel")
   .then(r => r.json())
-  .then(channelId => {
-    console.log("joining channel:" + channelId);
+  .then(response => {
+    console.log(JSON.stringify(response.channels, null, "  "));
     const socket = new Pusher(APP_KEY, {
+      authTransport: "jsonp",
       authEndpoint: API_URL + "pusherauth"
     });
 
-    const channel = socket.subscribe(channelId);
+    console.log("Joining channel:", response.channelId);
+
+    const channel = socket.subscribe(response.channelId);
 
     channel.bind("hello", event => {
       document.getElementById("serverevent").innerHTML = JSON.stringify(
@@ -36,6 +39,12 @@ fetch(API_URL + "getgamechannel")
     };
 
     channel.bind("pusher:subscription_succeeded", render);
+    channel.bind("pusher:subscription_error", error => {
+      console.log("Channel error:", error);
+    });
+    channel.bind("pusher:subscription_succeeded", () => {
+      console.log("Channel joined!");
+    });
     channel.bind("pusher:member_added", render);
     channel.bind("pusher:member_removed", render);
   });

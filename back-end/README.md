@@ -17,8 +17,10 @@ The template.yaml file is the link between the JS code and AWS.
 
 ### npm scripts
 
-* `setup` will install the functions npm modules and copy the shared code,
-  this needs to be run before packaging and when the shared code changed
+* `setup`
+  * installs npm modules for all Lambda functions
+  * copies the shared code to all Lambda functions
+  * needs to be run before packaging and when the shared code changed
 * `package` will upload the JS code for the Lambda functions to an S3 bucket
   and create a packaged.yaml
 * `deploy` will run CloudFormation with the packaged.yaml
