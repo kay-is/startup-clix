@@ -2,6 +2,8 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 
 Parameters:
+
+  # Pusher Credentials
   AppId:
     Type: String
   AppKey:
@@ -13,29 +15,42 @@ Globals:
   Function:
     Runtime: nodejs8.10
     Handler: shared/kappa.handler
+    Tags:
+      Application: Startup-Clix
     Timeout: 180
     Environment:
       Variables:
+
+        GAME_STATE_MACHINE_ARN: !Ref GameStateMachine
+        JOIN_GAME_ACTIVITY_ARN: !Ref JoinGameActivity
+
+        # Pusher Credentials
         APP_ID: !Ref AppId
         APP_KEY: !Ref AppKey
         SECRET_KEY: !Ref SecretKey
 
 Resources:
 
-  HelloFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: ./functions/hello
-      Events:
-        ScheduleOneMinuteEvent:
-          Type: Schedule
-          Properties:
-            Schedule: rate(1 minute)
+  ##############################
+  ###### Lambda Functions ######
+  ##############################
+
+#  HelloFunction:
+#    Type: AWS::Serverless::Function
+#    Properties:
+#      CodeUri: ./functions/hello
+#      Role: !GetAtt [ ExecutionRole, Arn ]
+#      Events:
+#        ScheduleOneMinuteEvent:
+#          Type: Schedule
+#          Properties:
+#            Schedule: rate(1 minute)
 
   GetGameChannelFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./functions/getGameChannel
+      Role: !GetAtt [ ExecutionRole, Arn ]
       Events:
         GetChannelEvent:
           Type: Api
@@ -47,9 +62,87 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./functions/pusherAuth
+      Role: !GetAtt [ ExecutionRole, Arn ]
       Events:
         pusherAuthEvent:
           Type: Api
           Properties:
             Path: /pusherauth
             Method: get
+
+  StartGameFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions/startGame
+      Role: !GetAtt [ ExecutionRole, Arn ]
+#      Events:
+#        pusherAuthEvent:
+#          Type: Api
+#          Properties:
+#            Path: /startgame
+#            Method: get
+
+  JoinGameFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions/joinGame
+      Role: !GetAtt [ ExecutionRole, Arn ]
+#      Events:
+#        pusherAuthEvent:
+#          Type: Api
+#          Properties:
+#            Path: /joingame
+#            Method: get
+
+  ##############################
+  ####### State Machine ########
+  ##############################
+
+  GameStateMachine:
+    Type: "AWS::StepFunctions::StateMachine"
+    Properties:
+      RoleArn: !GetAtt [ ExecutionRole, Arn ]
+      DefinitionString:
+        Fn::Sub:
+          - |-
+            {
+              "StartAt": "WaitingForPlayers",
+              "States": {
+                "WaitingForPlayers": {
+                  "Type": "Task",
+                  "Resource": "${joinGameActivityArn}",
+                  "TimeoutSeconds": 20,
+                  "End": true
+                }
+              }
+            }
+          -
+            joinGameActivityArn: !Ref JoinGameActivity
+
+  JoinGameActivity:
+    Type: "AWS::StepFunctions::Activity"
+    Properties:
+      Name: JoinGame
+
+  ##############################
+  ########### Role #############
+  ##############################
+
+  ExecutionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+                - !Sub states.${AWS::Region}.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess
+      Path: /

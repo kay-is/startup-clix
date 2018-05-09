@@ -6,8 +6,10 @@ exports.handler = (event, context, callback) =>
       if (r) {
         if (r.body) r.body = JSON.stringify(r.body);
 
-        const jsonpCallback = event.queryStringParameters.callback;
-        if (jsonpCallback) r.body = `${jsonpCallback}(${r.body})`;
+        if (event.queryStringParameters) {
+          const jsonpCallback = event.queryStringParameters.callback;
+          if (jsonpCallback) r.body = `${jsonpCallback}(${r.body})`;
+        }
       }
 
       callback(null, r);
