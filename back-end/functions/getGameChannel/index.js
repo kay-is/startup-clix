@@ -1,19 +1,47 @@
+const uuid = require("uuid/v4");
 const Pusher = require("pusher");
+const AWS = require("aws-sdk");
 
-const PRESENCE_PREFIX = "presence-";
-const CHANNEL_PREFIX = PRESENCE_PREFIX + "game-";
-const MAX_PLAYERS = 2;
+const {
+  CHANNEL_PREFIX,
+  MAX_PLAYERS,
+  PRESENCE_PREFIX
+} = require("./shared/constants");
+
+const stepFunctions = new AWS.StepFunctions();
 
 module.exports = async (event, context) => {
+  const { socket_id } = event.queryStringParameters;
+
+  const runningGames = await getRunningGames();
   const channels = await getChannels();
   const channelIds = Object.keys(channels);
 
-  let channelId = channelIds.find(id => channels[id].user_count < MAX_PLAYERS);
+  let channelId = channelIds.find(
+    id => channels[id].user_count < MAX_PLAYERS && !runningGames.includes(id)
+  );
 
-  if (!channelId) channelId = CHANNEL_PREFIX + channelIds.length;
+  if (!channelId) channelId = CHANNEL_PREFIX + uuid();
+
+  const presenceData = {
+    user_id: socket_id,
+    user_info: {
+      name: "Player " + socket_id
+    }
+  };
+
+  let auth;
+  try {
+    auth = pusher.authenticate(socket_id, channelId, presenceData);
+  } catch (e) {
+    return {
+      statusCode: 403,
+      body: { message: "Authentication with Pusher failed." }
+    };
+  }
 
   return {
-    body: { channelId }
+    body: { channelId, auth }
   };
 };
 
@@ -42,3 +70,13 @@ const getChannels = () =>
       }
     );
   });
+
+const listExecutionsParams = {
+  stateMachineArn: process.env.GAME_STATE_MACHINE_ARN,
+  statusFilter: "RUNNING"
+};
+const getRunningGames = () =>
+  stepFunctions
+    .listExecutions(listExecutionsParams)
+    .promise()
+    .then(r => r.executions.map(e => e.name));

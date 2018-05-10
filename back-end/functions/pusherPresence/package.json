@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "dependencies": {
+    "aws-sdk": "^2.235.1",
     "pusher": "^1.5.1"
   }
 }

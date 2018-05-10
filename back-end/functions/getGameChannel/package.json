@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "dependencies": {
-    "pusher": "^1.5.1"
+    "pusher": "^1.5.1",
+    "uuid": "^3.2.1"
   }
 }

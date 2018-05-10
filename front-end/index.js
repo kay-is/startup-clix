@@ -1,50 +1,71 @@
+Pusher.logToConsole = true;
+
 const API_URL = "https://bf6s24gp94.execute-api.us-east-1.amazonaws.com/Prod/";
 
 const APP_KEY = "2205eeb25f71d1ef40fd";
 
-console.log("getting a channel to join");
+const supportedAuthorizers = Pusher.Runtime.getAuthorizers();
 
-fetchJsonp(API_URL + "getgamechannel")
-  .then(r => r.json())
-  .then(response => {
-    console.log(JSON.stringify(response.channels, null, "  "));
-    const socket = new Pusher(APP_KEY, {
-      authTransport: "jsonp",
-      authEndpoint: API_URL + "pusherauth"
+supportedAuthorizers.preAuthenticated = function(context, socketId, callback) {
+  const { authOptions, channel } = this;
+  const authData = authOptions.preAuth[channel.name];
+
+  if (!authData) {
+    callback(true, "You need to pre-authenticate" + channel.name);
+  } else {
+    callback(false, authOptions.preAuth[channel.name]);
+  }
+};
+
+Pusher.Runtime.getAuthorizers = () => supportedAuthorizers;
+
+const pusher = new Pusher(APP_KEY, {
+  auth: { preAuth: {} },
+  authTransport: "preAuthenticated",
+  cluster: "mt1",
+  encrypted: true
+});
+
+const onConnect = () =>
+  fetchJsonp(
+    API_URL + "getgamechannel?socket_id=" + pusher.connection.socket_id
+  )
+    .then(r => r.json())
+    .then(({ channelId, auth }) => {
+      pusher.config.auth.preAuth[channelId] = auth;
+
+      const channel = pusher.subscribe(channelId);
+
+      channel.bind("game:start", event => {
+        document.getElementById("serverevent").innerHTML = JSON.stringify(
+          event,
+          null,
+          " "
+        );
+      });
+
+      const render = () => {
+        const { members } = channel;
+
+        document.getElementById("playercount").innerHTML = members.count;
+
+        const players = [];
+        members.each(member =>
+          players.push(`<li class="list-group-item">${member.info.name}</li>`)
+        );
+
+        document.getElementById("playerlist").innerHTML = players.join("");
+      };
+
+      channel.bind("pusher:subscription_succeeded", render);
+      channel.bind("pusher:subscription_error", error => {
+        console.log("Channel error:", error);
+      });
+      channel.bind("pusher:subscription_succeeded", () => {
+        console.log("Channel joined!");
+      });
+      channel.bind("pusher:member_added", render);
+      channel.bind("pusher:member_removed", render);
     });
 
-    console.log("Joining channel:", response.channelId);
-
-    const channel = socket.subscribe(response.channelId);
-
-    channel.bind("hello", event => {
-      document.getElementById("serverevent").innerHTML = JSON.stringify(
-        event,
-        null,
-        " "
-      );
-    });
-
-    const render = () => {
-      const { members } = channel;
-
-      document.getElementById("playercount").innerHTML = members.count;
-
-      const players = [];
-      members.each(member =>
-        players.push(`<li class="list-group-item">${member.info.name}</li>`)
-      );
-
-      document.getElementById("playerlist").innerHTML = players.join("");
-    };
-
-    channel.bind("pusher:subscription_succeeded", render);
-    channel.bind("pusher:subscription_error", error => {
-      console.log("Channel error:", error);
-    });
-    channel.bind("pusher:subscription_succeeded", () => {
-      console.log("Channel joined!");
-    });
-    channel.bind("pusher:member_added", render);
-    channel.bind("pusher:member_removed", render);
-  });
+pusher.connection.bind("connected", onConnect);

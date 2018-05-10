@@ -58,17 +58,17 @@ Resources:
             Path: /getgamechannel
             Method: get
 
-  PusherAuthFunction:
+  PusherPresenceFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./functions/pusherAuth
+      CodeUri: ./functions/pusherPresence
       Role: !GetAtt [ ExecutionRole, Arn ]
       Events:
         pusherAuthEvent:
           Type: Api
           Properties:
-            Path: /pusherauth
-            Method: get
+            Path: /pusherpresence
+            Method: post
 
   StartGameFunction:
     Type: AWS::Serverless::Function

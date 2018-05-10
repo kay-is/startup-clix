@@ -1,6 +1,8 @@
 const lambda = require("../index.js");
 
-exports.handler = (event, context, callback) =>
+exports.handler = (event, context, callback) => {
+  if (event.body) event.body = JSON.parse(event.body);
+
   lambda(event, context)
     .then(r => {
       if (r) {
@@ -15,3 +17,4 @@ exports.handler = (event, context, callback) =>
       callback(null, r);
     })
     .catch(callback);
+};
