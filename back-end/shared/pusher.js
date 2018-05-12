@@ -1,5 +1,5 @@
 const Pusher = require("pusher");
-const { MAX_PLAYERS, PRESENCE_PREFIX } = require("./shared/constants");
+const { PRESENCE_PREFIX } = require("./constants");
 
 const { APP_ID, APP_KEY, SECRET_KEY } = process.env;
 const pusher = new Pusher({
@@ -8,25 +8,10 @@ const pusher = new Pusher({
   secret: SECRET_KEY
 });
 
-module.exports = async (lambdaEvent, context) => {
-  const { events } = lambdaEvent.body;
+exports.authenticate = pusher.authenticate.bind(pusher);
+exports.trigger = pusher.trigger.bind(pusher);
 
-  for (let pusherEvent of events) await processPusherEvent(pusherEvent);
-
-  return { statusCode: 200 };
-};
-
-const processPusherEvent = async ({ channel, name }) => {
-  if (name == "member_removed") return;
-
-  const channels = await getChannels();
-
-  if (channels[channel].user_count == MAX_PLAYERS) {
-    pusher.trigger(channel, "game:start", { x: 123 });
-  }
-};
-
-const getChannels = () =>
+exports.getChannels = () =>
   new Promise((resolve, reject) => {
     pusher.get(
       {

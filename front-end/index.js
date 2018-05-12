@@ -31,17 +31,17 @@ const onConnect = () =>
     API_URL + "getgamechannel?socket_id=" + pusher.connection.socket_id
   )
     .then(r => r.json())
-    .then(({ channelId, auth }) => {
-      pusher.config.auth.preAuth[channelId] = auth;
+    .then(({ gameId, auth }) => {
+      pusher.config.auth.preAuth[gameId] = auth;
 
-      const channel = pusher.subscribe(channelId);
+      const channel = pusher.subscribe(gameId);
 
       channel.bind("game:start", event => {
-        document.getElementById("serverevent").innerHTML = JSON.stringify(
-          event,
-          null,
-          " "
-        );
+        document.getElementById("serverevent").innerHTML = "Game started!";
+      });
+
+      channel.bind("game:end", event => {
+        document.getElementById("serverevent").innerHTML = "Game ended!";
       });
 
       const render = () => {

@@ -1,12 +1,9 @@
 const uuid = require("uuid/v4");
-const Pusher = require("pusher");
 const AWS = require("aws-sdk");
+const db = require("./shared/datastore");
+const pusher = require("./shared/pusher");
 
-const {
-  CHANNEL_PREFIX,
-  MAX_PLAYERS,
-  PRESENCE_PREFIX
-} = require("./shared/constants");
+const { MAX_PLAYERS, CHANNEL_PREFIX } = require("./shared/constants");
 
 const stepFunctions = new AWS.StepFunctions();
 
@@ -14,14 +11,35 @@ module.exports = async (event, context) => {
   const { socket_id } = event.queryStringParameters;
 
   const runningGames = await getRunningGames();
-  const channels = await getChannels();
-  const channelIds = Object.keys(channels);
+  const channels = await pusher.getChannels();
 
-  let channelId = channelIds.find(
-    id => channels[id].user_count < MAX_PLAYERS && !runningGames.includes(id)
-  );
+  // find open games
+  let gameId = Object.keys(channels).find(id => !runningGames.includes(id));
 
-  if (!channelId) channelId = CHANNEL_PREFIX + uuid();
+  // use new gameId if no open game is available
+  if (!gameId) gameId = CHANNEL_PREFIX + uuid();
+
+  let gameFound = false;
+  do {
+    try {
+      // add player to new game in db
+      await db.incrementAttribute({
+        id: gameId,
+        attr: "PlayerCount",
+        max: MAX_PLAYERS
+      });
+      gameFound = true;
+    } catch (e) {
+      // All games are full OR have already started, creating a new one
+      if (e.code == "ConditionalCheckFailedException") {
+        gameId = CHANNEL_PREFIX + uuid();
+        continue;
+      }
+      // Some other DynamoDB error occurred
+      console.log(e);
+      return { statusCode: 500 };
+    }
+  } while (!gameFound);
 
   const presenceData = {
     user_id: socket_id,
@@ -32,44 +50,18 @@ module.exports = async (event, context) => {
 
   let auth;
   try {
-    auth = pusher.authenticate(socket_id, channelId, presenceData);
+    auth = pusher.authenticate(socket_id, gameId, presenceData);
   } catch (e) {
     return {
       statusCode: 403,
-      body: { message: "Authentication with Pusher failed." }
+      body: { message: "Pusher authentication failed." }
     };
   }
 
   return {
-    body: { channelId, auth }
+    body: { gameId, auth }
   };
 };
-
-const pusher = new Pusher({
-  appId: process.env.APP_ID,
-  key: process.env.APP_KEY,
-  secret: process.env.SECRET_KEY
-});
-
-const getChannels = () =>
-  new Promise((resolve, reject) => {
-    pusher.get(
-      {
-        path: "/channels",
-        params: {
-          filter_by_prefix: PRESENCE_PREFIX,
-          info: ["user_count"]
-        }
-      },
-      (error, request, response) => {
-        if (response.statusCode === 200) {
-          const result = JSON.parse(response.body);
-          return resolve(result.channels);
-        }
-        reject(error);
-      }
-    );
-  });
 
 const listExecutionsParams = {
   stateMachineArn: process.env.GAME_STATE_MACHINE_ARN,

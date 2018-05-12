@@ -20,9 +20,7 @@ Globals:
     Timeout: 180
     Environment:
       Variables:
-
-        GAME_STATE_MACHINE_ARN: !Ref GameStateMachine
-        JOIN_GAME_ACTIVITY_ARN: !Ref JoinGameActivity
+        TABLE_NAME: !Ref GameTable
 
         # Pusher Credentials
         APP_ID: !Ref AppId
@@ -32,25 +30,17 @@ Globals:
 Resources:
 
   ##############################
-  ###### Lambda Functions ######
+  ### API-Gateway Functions ####
   ##############################
-
-#  HelloFunction:
-#    Type: AWS::Serverless::Function
-#    Properties:
-#      CodeUri: ./functions/hello
-#      Role: !GetAtt [ ExecutionRole, Arn ]
-#      Events:
-#        ScheduleOneMinuteEvent:
-#          Type: Schedule
-#          Properties:
-#            Schedule: rate(1 minute)
 
   GetGameChannelFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./functions/getGameChannel
       Role: !GetAtt [ ExecutionRole, Arn ]
+      Environment:
+        Variables:
+          GAME_STATE_MACHINE_ARN: !Ref GameStateMachine
       Events:
         GetChannelEvent:
           Type: Api
@@ -58,11 +48,14 @@ Resources:
             Path: /getgamechannel
             Method: get
 
-  PusherPresenceFunction:
+  PusherPresenceWebhookFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./functions/pusherPresence
+      CodeUri: ./functions/pusherPresenceWebhook
       Role: !GetAtt [ ExecutionRole, Arn ]
+      Environment:
+        Variables:
+          GAME_STATE_MACHINE_ARN: !Ref GameStateMachine
       Events:
         pusherAuthEvent:
           Type: Api
@@ -70,29 +63,28 @@ Resources:
             Path: /pusherpresence
             Method: post
 
-  StartGameFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: ./functions/startGame
-      Role: !GetAtt [ ExecutionRole, Arn ]
-#      Events:
-#        pusherAuthEvent:
-#          Type: Api
-#          Properties:
-#            Path: /startgame
-#            Method: get
+  ##############################
+  ### State-Machine Functions ##
+  ##############################
 
-  JoinGameFunction:
+  GameStartFunction: 
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./functions/joinGame
+      CodeUri: ./functions/gameStart
       Role: !GetAtt [ ExecutionRole, Arn ]
-#      Events:
-#        pusherAuthEvent:
-#          Type: Api
-#          Properties:
-#            Path: /joingame
-#            Method: get
+
+  GameEndFunction: 
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions/gameEnd
+      Role: !GetAtt [ ExecutionRole, Arn ]
+
+  ##############################
+  ########### Table ############
+  ##############################
+
+  GameTable: 
+    Type: AWS::Serverless::SimpleTable
 
   ##############################
   ####### State Machine ########
@@ -106,23 +98,37 @@ Resources:
         Fn::Sub:
           - |-
             {
-              "StartAt": "WaitingForPlayers",
+              "StartAt": "GameStart",
               "States": {
-                "WaitingForPlayers": {
+                "GameStart": {
                   "Type": "Task",
-                  "Resource": "${joinGameActivityArn}",
-                  "TimeoutSeconds": 20,
+                  "Resource": "${GameStartFunctionArn}",
+                  "TimeoutSeconds": 5,
+                  "Next": "RoundStart"
+                },
+                "RoundStart": {
+                  "Type": "Pass",
+                  "Next": "Round"
+                },
+                "Round": {
+                  "Type": "Wait",
+                  "Seconds": 5,
+                  "Next": "RoundEnd"
+                },
+                "RoundEnd": {
+                  "Type": "Pass",
+                  "Next": "GameEnd"
+                },
+                "GameEnd": {
+                  "Type": "Task",
+                  "Resource": "${GameEndFunctionArn}",
                   "End": true
                 }
               }
             }
           -
-            joinGameActivityArn: !Ref JoinGameActivity
-
-  JoinGameActivity:
-    Type: "AWS::StepFunctions::Activity"
-    Properties:
-      Name: JoinGame
+            GameStartFunctionArn: !GetAtt [ GameStartFunction, Arn ]
+            GameEndFunctionArn: !GetAtt [ GameEndFunction, Arn ]
 
   ##############################
   ########### Role #############
@@ -145,4 +151,6 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
         - arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaRole
       Path: /
