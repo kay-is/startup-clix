@@ -8,7 +8,7 @@ const { MAX_PLAYERS, CHANNEL_PREFIX } = require("./shared/constants");
 const stepFunctions = new AWS.StepFunctions();
 
 module.exports = async (event, context) => {
-  const { socket_id } = event.queryStringParameters;
+  const { socket_id, user_name } = event.queryStringParameters;
 
   const runningGames = await getRunningGames();
   const channels = await pusher.getChannels();
@@ -44,7 +44,7 @@ module.exports = async (event, context) => {
   const presenceData = {
     user_id: socket_id,
     user_info: {
-      name: "Player " + socket_id
+      name: user_name
     }
   };
 
