@@ -3,6 +3,9 @@ Transform: AWS::Serverless-2016-10-31
 
 Parameters:
 
+  JwtSecret:
+    Type: String
+
   # Pusher Credentials
   AppId:
     Type: String
@@ -10,6 +13,7 @@ Parameters:
     Type: String
   SecretKey:
     Type: String
+
 
 Globals:
   Function:
@@ -21,6 +25,7 @@ Globals:
     Environment:
       Variables:
         TABLE_NAME: !Ref GameTable
+        JWT_SECRET: !Ref JwtSecret
 
         # Pusher Credentials
         APP_ID: !Ref AppId
@@ -48,6 +53,18 @@ Resources:
             Path: /getgamechannel
             Method: get
 
+  SellProductFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions/sellProduct
+      Role: !GetAtt [ ExecutionRole, Arn ]
+      Events:
+        GetChannelEvent:
+          Type: Api
+          Properties:
+            Path: /sellproduct
+            Method: get
+
   PusherPresenceWebhookFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -71,6 +88,18 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./functions/gameStart
+      Role: !GetAtt [ ExecutionRole, Arn ]
+
+  RoundStartFunction: 
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions/roundStart
+      Role: !GetAtt [ ExecutionRole, Arn ]
+
+  RoundEndFunction: 
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions/roundEnd
       Role: !GetAtt [ ExecutionRole, Arn ]
 
   GameEndFunction: 
@@ -104,20 +133,40 @@ Resources:
                   "Type": "Task",
                   "Resource": "${GameStartFunctionArn}",
                   "TimeoutSeconds": 5,
+                  "Next": "WaitForNextRound"
+                },
+                "WaitForNextRound": {
+                  "Type": "Wait",
+                  "Seconds": 3,
                   "Next": "RoundStart"
                 },
                 "RoundStart": {
-                  "Type": "Pass",
+                  "Type": "Task",
+                  "Resource": "${RoundStartFunctionArn}",
+                  "TimeoutSeconds": 5,
                   "Next": "Round"
                 },
                 "Round": {
                   "Type": "Wait",
-                  "Seconds": 5,
+                  "Seconds": 10,
                   "Next": "RoundEnd"
                 },
                 "RoundEnd": {
-                  "Type": "Pass",
-                  "Next": "GameEnd"
+                  "Type": "Task",
+                  "Resource": "${RoundEndFunctionArn}",
+                  "TimeoutSeconds": 5,
+                  "Next": "CheckRemainingPlayers"
+                },
+                "CheckRemainingPlayers": {
+                  "Type": "Choice",
+                  "Default": "WaitForNextRound",
+                  "Choices": [
+                    {
+                      "Variable": "$.activePlayerCount",
+                      "NumericEquals": 1,
+                      "Next": "GameEnd"
+                    }
+                  ]
                 },
                 "GameEnd": {
                   "Type": "Task",
@@ -128,6 +177,8 @@ Resources:
             }
           -
             GameStartFunctionArn: !GetAtt [ GameStartFunction, Arn ]
+            RoundStartFunctionArn: !GetAtt [ RoundStartFunction, Arn ]
+            RoundEndFunctionArn: !GetAtt [ RoundEndFunction, Arn ]
             GameEndFunctionArn: !GetAtt [ GameEndFunction, Arn ]
 
   ##############################

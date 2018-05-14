@@ -1,5 +1,6 @@
 module.exports = {
   MAX_PLAYERS: 2,
   PRESENCE_PREFIX: "presence-",
-  CHANNEL_PREFIX: "presence-game-"
+  CHANNEL_PREFIX: "presence-game-",
+  PLAYER_PREFIX: "player-"
 };

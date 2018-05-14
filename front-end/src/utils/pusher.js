@@ -1,6 +1,6 @@
 import Pusher from "pusher-js";
-import { APP_KEY, API_URL } from "./constants";
-import fetchJsonp from "fetch-jsonp";
+import { APP_KEY } from "./constants";
+import gameApiClient from "./gameApiClient";
 
 const supportedAuthorizers = Pusher.Runtime.getAuthorizers();
 
@@ -24,12 +24,8 @@ export default () => {
   });
 
   pusher.getGameChannelId = function(userName) {
-    const url = `${API_URL}getgamechannel?socket_id=${
-      pusher.connection.socket_id
-    }&user_name=${userName}`;
-
-    return fetchJsonp(url)
-      .then(r => r.json())
+    return gameApiClient
+      .getGameChannel(pusher.connection.socket_id, userName)
       .then(({ gameId, auth }) => {
         pusher.config.auth.preAuth[gameId] = auth;
         return gameId;

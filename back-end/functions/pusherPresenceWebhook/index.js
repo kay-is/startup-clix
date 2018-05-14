@@ -12,6 +12,7 @@ module.exports = async (lambdaEvent, context) => {
     const { channel, name, user_id } = pusherEvent;
     if (name == "member_added") await processMemberAdded(channel, user_id);
     if (name == "member_removed") await processMemberRemoved(channel, user_id);
+    if (name == "channel_vacated") await processGameVacated(channel);
   }
 
   return { statusCode: 200 };
@@ -26,7 +27,7 @@ const processMemberAdded = async (gameId, userId) => {
 
   const executionParams = {
     stateMachineArn: GAME_STATE_MACHINE_ARN,
-    input: JSON.stringify({ gameId }),
+    input: JSON.stringify({ gameId, activePlayers: MAX_PLAYERS }),
     name: gameId
   };
 
@@ -35,8 +36,12 @@ const processMemberAdded = async (gameId, userId) => {
 
 const processMemberRemoved = async (gameId, userId) => {
   try {
-    await db.decrementAttribute({ id: gameId, attr: "PlayerCount" });
+    await db.removePlayer(gameId, userId);
   } catch (e) {
     console.log(e);
   }
+};
+
+const processGameVacated = async gameId => {
+  await db.deleteGame(gameId);
 };
