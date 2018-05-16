@@ -80,7 +80,10 @@ class Game extends React.Component {
     }));
   };
 
-  handleGameEnd = () => this.setState({ gameEnded: true });
+  handleGameEnd = () => {
+    this.playSound("end");
+    this.setState({ gameEnded: true });
+  };
 
   handlePlayerJoined = player =>
     this.setState(state => ({
@@ -104,6 +107,7 @@ class Game extends React.Component {
 
   sounds = {
     click: document.getElementById("clickAudio"),
+    end: document.getElementById("endAudio"),
     sale: document.getElementById("saleAudio")
   };
 
@@ -140,7 +144,15 @@ class Game extends React.Component {
 
     let content;
 
-    if (gameEnded) content = <h2>Game ended!</h2>;
+    if (gameEnded)
+      content = (
+        <div className="text-center">
+          <h3>Game Ended!</h3>
+          <h2>THE WINNER IS</h2>
+          <h1>{players[0].info.name}</h1>
+          <h2>Congratulations!</h2>
+        </div>
+      );
     else if (!gameStarted) {
       content = (
         <div
