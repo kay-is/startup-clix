@@ -7,7 +7,9 @@ class Game extends React.Component {
     gameStarted: false,
     gameEnded: false,
     players: [],
-    sold: true
+    sold: true,
+    productPrice: 0,
+    secondsLeft: 0
   };
 
   roundStart = Date.now();
@@ -25,6 +27,26 @@ class Game extends React.Component {
     gameChannel.bind("round:start", this.handleRoundStart);
     gameChannel.bind("round:end", this.handleRoundEnd);
     gameChannel.bind("game:end", this.handleGameEnd);
+
+    this.priceInterval = setInterval(() => {
+      const productPrice =
+        parseInt(
+          500000 * this.clicks / (Date.now() - this.roundStartTime),
+          10
+        ) /
+        10 *
+        10;
+
+      const secondsLeft = parseInt(
+        (10000 - (Date.now() - this.roundStartTime)) / 1000
+      );
+
+      this.setState({ productPrice, secondsLeft });
+    }, 500);
+  }
+
+  componentWillUnmount() {
+    clearInterval(this.priceInterval);
   }
 
   handleGameStart = data =>
@@ -36,7 +58,11 @@ class Game extends React.Component {
       })
     }));
 
-  handleRoundStart = data => this.setState({ sold: false });
+  roundStartTime = 1;
+  handleRoundStart = data => {
+    this.roundStartTime = Date.now();
+    this.setState({ sold: false });
+  };
 
   handleRoundEnd = update => {
     this.clicks = 0;
@@ -76,11 +102,25 @@ class Game extends React.Component {
     this.setState({ players });
   };
 
+  sounds = {
+    click: document.getElementById("clickAudio"),
+    sale: document.getElementById("saleAudio")
+  };
+
+  playSound = name => {
+    const sound = this.sounds[name];
+    sound.pause();
+    sound.currentTime = 0;
+    sound.play();
+  };
+
   handleProductClick = () => {
+    this.playSound("click");
     this.clicks = this.clicks + 1;
   };
 
   handleSale = async () => {
+    this.playSound("sale");
     this.saleTime = Date.now();
     this.setState({ sold: true });
     await gameApiClient.sellProduct(this.clicks);
@@ -89,7 +129,14 @@ class Game extends React.Component {
 
   render() {
     const { gameChannel, privateGame } = this.props;
-    const { players, gameStarted, gameEnded, sold } = this.state;
+    const {
+      players,
+      gameStarted,
+      gameEnded,
+      sold,
+      productPrice,
+      secondsLeft
+    } = this.state;
 
     let content;
 
@@ -125,10 +172,13 @@ class Game extends React.Component {
         <div className="card">
           <h3 className="card-header">Create a Product</h3>
           <div className="card-body">
-            <h5>
+            <p>
               The faster you click on the product, the better it gets, but don't
               forget to sell it when you're done!
-            </h5>
+            </p>
+            {secondsLeft > 0 && (
+              <h5>Round ends in about {secondsLeft} seconds</h5>
+            )}
           </div>
           {sold ? (
             <h2 className="text-center">Wait for the next round!</h2>
@@ -141,6 +191,7 @@ class Game extends React.Component {
                   src="https://placeimg.com/300/200/tech"
                   alt="product"
                 />
+                <h4>about ${productPrice}</h4>
               </button>,
 
               <div className="card-body">
