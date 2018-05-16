@@ -14,14 +14,12 @@ Parameters:
   SecretKey:
     Type: String
 
-
 Globals:
   Function:
     Runtime: nodejs8.10
     Handler: shared/kappa.handler
     Tags:
       Application: Startup-Clix
-    Timeout: 180
     Environment:
       Variables:
         TABLE_NAME: !Ref GameTable
@@ -53,6 +51,21 @@ Resources:
             Path: /getgamechannel
             Method: get
 
+  JoinPrivateGameChannelFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions/joinPrivateGameChannel
+      Role: !GetAtt [ ExecutionRole, Arn ]
+      Environment:
+        Variables:
+          GAME_STATE_MACHINE_ARN: !Ref GameStateMachine
+      Events:
+        GetChannelEvent:
+          Type: Api
+          Properties:
+            Path: /joinprivategamechannel
+            Method: get
+
   SellProductFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -65,10 +78,10 @@ Resources:
             Path: /sellproduct
             Method: get
 
-  PusherPresenceWebhookFunction:
+  PusherWebhookFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./functions/pusherPresenceWebhook
+      CodeUri: ./functions/pusherWebhook
       Role: !GetAtt [ ExecutionRole, Arn ]
       Environment:
         Variables:

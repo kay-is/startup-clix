@@ -23,9 +23,27 @@ export default () => {
     encrypted: true
   });
 
-  pusher.getGameChannelId = function(userName) {
+  pusher.getGameChannelId = function(userName, createPrivateGame, playerCount) {
     return gameApiClient
-      .getGameChannel(pusher.connection.socket_id, userName)
+      .getGameChannel(
+        pusher.connection.socket_id,
+        userName,
+        createPrivateGame,
+        playerCount
+      )
+      .then(({ gameId, auth }) => {
+        pusher.config.auth.preAuth[gameId] = auth;
+        return gameId;
+      });
+  };
+
+  pusher.joinPrivateGameChannel = function(userName, privateGameId) {
+    return gameApiClient
+      .joinPrivateGameChannel(
+        pusher.connection.socket_id,
+        userName,
+        privateGameId
+      )
       .then(({ gameId, auth }) => {
         pusher.config.auth.preAuth[gameId] = auth;
         return gameId;

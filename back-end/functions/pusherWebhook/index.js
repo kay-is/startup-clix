@@ -1,7 +1,6 @@
 const AWS = require("aws-sdk");
 const stepFunctions = new AWS.StepFunctions();
 
-const { MAX_PLAYERS } = require("./shared/constants");
 const db = require("./shared/datastore");
 const pusher = require("./shared/pusher");
 
@@ -22,12 +21,13 @@ const { GAME_STATE_MACHINE_ARN } = process.env;
 
 const processMemberAdded = async (gameId, userId) => {
   const channels = await pusher.getChannels();
+  const game = await db.getGame(gameId);
 
-  if (channels[gameId].user_count != MAX_PLAYERS) return;
+  if (channels[gameId].user_count != game.MaxPlayers) return;
 
   const executionParams = {
     stateMachineArn: GAME_STATE_MACHINE_ARN,
-    input: JSON.stringify({ gameId, activePlayers: MAX_PLAYERS }),
+    input: JSON.stringify({ gameId, activePlayers: game.MaxPlayers }),
     name: gameId
   };
 

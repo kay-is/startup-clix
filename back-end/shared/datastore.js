@@ -10,20 +10,49 @@ const update = db("update");
 const remove = db("delete");
 const get = db("get");
 
+exports.createGame = (
+  gameId,
+  userId,
+  maxPlayers = MAX_PLAYERS,
+  privateGame = false
+) =>
+  update({
+    TableName: TABLE_NAME,
+    Key: { id: gameId },
+    ExpressionAttributeValues: {
+      ":user_id": parseSet([userId]),
+      ":max": parseInt(maxPlayers),
+      ":private_game": privateGame
+    },
+    UpdateExpression:
+      "SET Players = :user_id, MaxPlayers = :max, PrivateGame = :private_game"
+  });
+
+exports.addPrivatePlayer = (gameId, userId) =>
+  update({
+    TableName: TABLE_NAME,
+    Key: { id: gameId },
+    ExpressionAttributeValues: {
+      ":user_id": parseSet([userId])
+    },
+    ConditionExpression:
+      "attribute_not_exists(Players) OR size(Players) < MaxPlayers",
+    UpdateExpression: "ADD Players :user_id"
+  });
+
 exports.addPlayer = (gameId, userId) =>
   update({
     TableName: TABLE_NAME,
     Key: { id: gameId },
     ExpressionAttributeValues: {
       ":user_id": parseSet([userId]),
-      ":max": MAX_PLAYERS
+      ":no_private_game": false
     },
     ConditionExpression:
-      "attribute_not_exists(Players) OR size(Players) < :max",
+      "(PrivateGame = :no_private_game) AND (attribute_not_exists(Players) OR (size(Players) < MaxPlayers))",
     UpdateExpression: "ADD Players :user_id"
   });
 
-// FIXME: removing the userId from the Players set
 exports.removePlayer = (gameId, userId) =>
   update({
     TableName: TABLE_NAME,

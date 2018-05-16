@@ -5,44 +5,56 @@ class Login extends React.Component {
   state = {
     loginDisabled: true,
     loading: false,
-    userName: ""
+    userName: "",
+    playerCount: undefined
   };
 
-  handleInput = e => {
+  handlePrivateCheckbox = e => this.setState({ privateGame: e.target.checked });
+
+  handleInput = e =>
     this.setState({
       userName: e.target.value,
       loginDisabled: !e.target.value.length
     });
+
+  handleKeyPress = ({ key }) => key === "Enter" && this.handleLogin(false)();
+
+  handlePlayerCount = e => {
+    let playerCount = parseInt(e.target.value);
+    if (playerCount > 10) playerCount = 10;
+    this.setState({ playerCount });
   };
 
-  handleKeyPress = ({ key }) => key === "Enter" && this.handleLogin();
-
-  handleLogin = () => {
+  handleLogin = privateGame => () => {
     this.setState({ loading: true });
-    this.props.onLogin(this.state.userName);
+
+    const { userName, playerCount } = this.state;
+    this.props.onLogin(userName, privateGame, playerCount);
   };
 
   render() {
     const { loginDisabled } = this.state;
 
+    const privateGameId = window.location.hash.substring(1);
+
     return (
       <div className="container">
         <div
           className="jumbotron bg-light"
-          style={{ width: "60%", margin: "auto", textAlign: "center" }}
+          style={{ maxWidth: 500, margin: "auto", textAlign: "center" }}
         >
-          <h1 className="display-3">Startup CliX</h1>
+          <h1 className="display-5">Startup CliX</h1>
           <h3>
-            A serverless multiplayer game created with{" "}
-            <a href="https://pusher.com/channels">Pusher Channels</a> and{" "}
+            A game created with<br />
+            <a href="https://pusher.com/channels">Pusher Channels</a>
+            <br /> and{" "}
             <a href="https://github.com/awslabs/serverless-application-model">
               AWS SAM
-            </a>!
+            </a>
           </h3>
-          <p>A game will start when enough players have joined.</p>
 
           <div className="form-group">
-            <label>Enter a Player Name</label>
+            <label>Enter a player name!</label>
             <input
               className="form-control"
               autoFocus={true}
@@ -50,25 +62,49 @@ class Login extends React.Component {
               onKeyPress={this.handleKeyPress}
             />
           </div>
+
           {this.state.loading ? (
             <Loading text="Joining game..." />
           ) : (
-            <button
-              onClick={this.handleLogin}
-              className="btn btn-outline-primary btn-lg btn-block"
-              disabled={loginDisabled}
-            >
-              Join Game
-            </button>
+            <div>
+              <button
+                onClick={this.handleLogin(false)}
+                className="btn btn-success btn-lg btn-block"
+                disabled={loginDisabled}
+              >
+                {!!privateGameId ? "Join Game of a Friend" : "Join Public Game"}
+              </button>
+              <br />
+              {!privateGameId && (
+                <div className="d-flex">
+                  <button
+                    style={{ flex: 3 }}
+                    onClick={this.handleLogin(true)}
+                    className="btn btn-info btn-lg btn-block"
+                    disabled={loginDisabled}
+                  >
+                    Start Private Game
+                  </button>
+                  <input
+                    type="number"
+                    style={{ flex: 1 }}
+                    className="form-control"
+                    placeholder="4 Players"
+                    value={this.state.playerCount}
+                    onChange={this.handlePlayerCount}
+                  />
+                </div>
+              )}
+            </div>
           )}
-          <br />
-          <h5 className="text-center">
-            This game is a submission to{" "}
-            <a href="https://dev.to/devteam/first-ever-dev-contest-build-a-realtime-app-with-pusher-4nhp">
-              the first ever DEV contest
-            </a>
-          </h5>
         </div>
+        <br />
+        <h5 className="text-center">
+          This game is a submission to<br />
+          <a href="https://dev.to/devteam/first-ever-dev-contest-build-a-realtime-app-with-pusher-4nhp">
+            the first ever DEV contest
+          </a>
+        </h5>
       </div>
     );
   }

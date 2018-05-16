@@ -11,8 +11,11 @@ class App extends Component {
     gameId: null,
     connected: false,
     limitReached: false,
-    screen: "login"
+    screen: "login",
+    privateGame: false
   };
+
+  privateGameId = window.location.hash.substring(1);
 
   pusher: null;
   componentDidMount() {
@@ -26,17 +29,43 @@ class App extends Component {
   }
 
   gameChannel = null;
-  handleLogin = async userName => {
-    const gameId = await this.pusher.getGameChannelId(userName);
+  handleLogin = async (userName, privateGame, playerCount) => {
+    let gameId;
+
+    // if we have this.privateGameId, it came from the URL hash
+    // join an existing private game
+
+    // if the privateGame arugment is true, the current client
+    // join a new private game
+
+    if (!!this.privateGameId) {
+      gameId = await this.pusher.joinPrivateGameChannel(
+        userName,
+        this.privateGameId
+      );
+      privateGame = true;
+    } else {
+      gameId = await this.pusher.getGameChannelId(
+        userName,
+        privateGame,
+        playerCount
+      );
+    }
 
     this.gameChannel = this.pusher.subscribe(gameId);
     this.gameChannel.bind("pusher:subscription_succeeded", () =>
-      this.setState({ screen: "game", userName })
+      this.setState({ screen: "game", userName, privateGame })
     );
   };
 
   render() {
-    const { connected, limitReached, screen, userName } = this.state;
+    const {
+      connected,
+      limitReached,
+      privateGame,
+      screen,
+      userName
+    } = this.state;
 
     if (limitReached)
       return (
@@ -54,7 +83,13 @@ class App extends Component {
     if (screen === "login") return <LoginScreen onLogin={this.handleLogin} />;
 
     if (screen === "game")
-      return <GameScreen gameChannel={this.gameChannel} userName={userName} />;
+      return (
+        <GameScreen
+          gameChannel={this.gameChannel}
+          userName={userName}
+          privateGame={privateGame}
+        />
+      );
   }
 }
 
